@@ -1,0 +1,649 @@
+# This file is made/ adapted by Esther Meeuwissen. For questions esther.meeuwissen@fcdonders.ru.nl
+# may2012 This file is adapted by Marijn Struiksma. For questions m.struiksma@uu.nl
+
+string naam1 = parameter_manager.get_string( "ParticipantName", "naam?" );
+
+######################################			
+output_port port = output_port_manager.get_port( 1 );   # define output poort as 'port' and port is the first output port (the number of output ports is defined as port_count)
+
+int IWI = 150;     													# interword interval
+int waitodd = 1000;													# interval before the oddball task starts
+int duur = 300;														# define parameters; duur,
+int max_paragraphs = 1000;											# max_paragraphs,
+int max_lines = 1000;            								# max-lines,
+int stuur = 0;	
+
+# define files with practice and exeprimental files
+string praclijst = "prac_lijstEB.txt";							# the paramater is itemlijst which is a .txt file
+string beledlijst = "stim_lijstEBforward.txt";						# the paramater is practicelijst which is a .txt file
+string complijst = "comp_lijstEBforward.txt";
+
+# define variables for practice trials
+array<string> paragraphs1[max_paragraphs][max_lines];		# define an array with strings called paragrapghs1 with {1, ..., 1000}(max_paragraghs) and 1000 (max_lines) times
+int paragraph_count1 = 0;											# define paragragh_count1
+array<int> line_counts1[max_paragraphs]; 						# define array with integers called line_counts1 with {1,...,1000}
+# define variables for experimental trials
+array<string> paragraphs[max_paragraphs][max_lines];		# define an array with strings called paragrapghs with {1, ..., 1000}(max_paragraghs) and 1000 (max_lines) times
+int paragraph_count = 0;											# define paragragh_count# define paragragh_count
+array<int> line_counts[max_paragraphs]; 						# define array with integers called line_counts with {1,...,1000}
+# define variables for compliments trials
+array<string> paragraphs2[max_paragraphs][max_lines];		# define an array with strings called paragrapghs1 with {1, ..., 1000}(max_paragraghs) and 1000 (max_lines) times
+int paragraph_count2 = 0;											# define paragragh_count1
+array<int> line_counts2[max_paragraphs]; 						# define array with integers called line_counts1 with {1,...,1000}
+
+
+#################################################################################
+# functions needed to read in data
+#################################################################################
+### returns the number of words in a string
+### words must be separated by 1 space only!
+
+sub																		
+   int count_words( string lines )								# define count_words (= number of words in a sentence) and string lines (contains all letters from word/sentences from the txt file)
+begin  																	# 
+   int count = 1;														# define count
+   loop 
+		int i = 1 														# define i (= the i-th letter/position in the sentence)
+	until i > lines.count() 										# loop until i larger than lines.count (= the last letter of the sentence)
+	begin																	
+      if (lines[i] == ' ') 										# if you encounter an empty spot in lines (a space), 
+      then	count = count + 1										# add 1 to count 										
+      end;
+      i = i + 1														# go to the nex letter/position and see what is there
+   end;
+   return count														# count is the number of words in the sentence from the txt file
+end;
+
+### splits string into an array of words
+### words must be separated by 1 space only
+
+sub
+   split( string lines, array<string,1>& words )			# split a string with letters into an array with the words of that sentence
+begin
+   int count = 1;														# def count  (number of words)
+   int pos = 1;														# def pos (begin letter of each word)
+   loop 
+	int i = 1 															# def i (number of letters)
+	until i > lines.count() 										# loop until i is larger than lines.count (= the last letter of the sentence)
+	begin
+      if (lines[i] == ' ') 										# at a space
+		then words[count] = lines.substring( pos, i - pos );# make a substring from begin till end of the word and put this in the array words at position count 
+           count = count + 1;										# count increases at space
+          pos = i + 1												# pos 1 higher (at the position of the first letter of the next word)
+      end;
+      i = i + 1														# i increases after each letter.
+   end;
+   words[count] = lines.substring( pos, lines.count() - pos + 1 ); # make a substring of the first letter till the last letter + the spatie after each word and put this in words at position count
+end;   
+                           
+#####################################################################################
+### read in the text for the practice trials
+##################################################################################### 
+
+input_file file1 = new input_file;								# define new file
+file1.open( praclijst );											# open the file, called praclijst
+file1.set_delimiter(42);
+string temp1 = file1.get_line();									# define temp, string with text from the current file position until reaching a delimiter character (enter) 
+paragraph_count1 = 1;												# def paragraph_count, only relevant if you have multiple paragraphs in 1 file
+
+loop 
+until (!file1.last_succeeded()) 									# indicates if the last attempted read method succeeded
+begin
+	if (temp1.find("$")>0)
+	then paragraph_count1 = paragraph_count1 + 1;			# paragraph_count increases
+	else
+      line_counts1[paragraph_count1] = line_counts1[paragraph_count1] + 1; # count the number of lines/trials
+      paragraphs1[paragraph_count1][line_counts1[paragraph_count1]] = temp1; # in paragraph place the text from temp at the position of line_counts 
+   end;
+   temp1 = file1.get_line();											# fill temp with the next line
+end;
+
+#####################################################################################
+### read in the text for the experiment itself
+##################################################################################### 
+
+input_file file = new input_file;								
+file.open( beledlijst );												
+file.set_delimiter(42);
+string temp = file.get_line();									
+paragraph_count = 1;													
+
+loop 
+until (!file.last_succeeded()) 									
+begin
+	if (temp.find("$")>0) then 
+		paragraph_count = paragraph_count + 1;				
+	else
+      line_counts[paragraph_count] = line_counts[paragraph_count] + 1; 
+      paragraphs[paragraph_count][line_counts[paragraph_count]] = temp; 
+   end;
+   temp = file.get_line();											
+end;
+term.print("nr paragraphs:");
+term.print(paragraph_count);
+term.print(" line_counts:");
+term.print(line_counts[paragraph_count]);
+term.print("\n");
+
+#####################################################################################
+### read in the text for the compliment trials
+##################################################################################### 
+
+input_file file2 = new input_file;								# define new file
+file2.open( complijst );											# open the file, called complijst
+file2.set_delimiter(42); 
+string temp2 = file2.get_line();									# define temp, string with text from the current file position until reaching a delimiter character (enter) 
+paragraph_count2 = 1;												# def paragraph_count, only relevant if you help multiple paragraphs in 1 file
+
+loop 
+until (!file2.last_succeeded()) 									# indicates if the last attempted read method succeeded
+begin
+	if (temp2.find("$")>0)
+	then paragraph_count2 = paragraph_count2 + 1;			# paragraph_count increases
+	else
+      line_counts2[paragraph_count2] = line_counts2[paragraph_count2] + 1; # count the number of lines/trials
+      paragraphs2[paragraph_count2][line_counts2[paragraph_count2]] = temp2; # in paragraph place the text from temp at the position of line_counts 
+   end;
+   temp2 = file2.get_line();											# fill temp with the next line
+end;
+
+#######################################################################################
+# start the experiment
+######################################	
+
+start1.present();
+blankkort.present();
+ask_name.present();													# check that you have the correct subject name!
+blank.present();
+name.set_caption( naam1 ); 
+name.redraw(); 
+check_name.present();
+blankkort.present();
+
+whatsapp_intro.present();											# introduceer Whatsapp
+whatsapp_profile.present();
+blank.present();
+
+fixation.present();											# uitleg fixation cross
+blankkort.present();
+
+voor_opinie.present();									## instructiescherm voor rating
+blank.present();
+opinie1.present();
+blank.present();
+opinie2.present();
+blankkort.present();
+
+oefen1.present();														# present the practice trial
+blankkort.present();
+
+term.print_line("start oefen");
+
+##############################################################################################
+###### START EXPERIMENT FIRST PRACTICE TRIALS THEN BLOCK
+###### NEXT BLOCK STARTS WITH NEW PRACTICE MANTRA
+##############################################################################################
+loop
+   int i = 1													# def i
+until
+   i > paragraph_count												# loop through all blocks (3 in total) 
+begin
+	
+	loop
+		int h = 1															# def h
+	until
+		h > paragraph_count1												# loop from h larger than paragraph_count1 (is now 1 for this experiment, so redundant) 
+	begin
+
+   # go through all lines
+	int nr_trials_prac=line_counts1[paragraph_count1];
+
+	if i == 1 then
+		pre_oefen1.present();
+
+	loop
+			int lines1 = 1;												# def lines #CHANGE THE NR OF TRIALS PRESENTED
+		until
+			lines1 > nr_trials_prac										# loop through all lines
+		begin               												
+			#lees.present();
+			
+			fixbeep.present();
+			# go through all words in the lines
+			array<string> words1[count_words( paragraphs1[h][lines1] )]; # make an array met het aantal with the number of words per trial
+
+			split( paragraphs1[h][lines1], words1 ); 				# split the array trial into an array 'words' with separate words
+
+			loop
+				int word1 = 2												# def word, a counter the number of words, the 1st word is the trial number
+			until
+				word1 > words1.count()									# loop until word is equal to the number of words in the sentence(=words.count)
+			begin          
+				int letters1 = words1[word1].count();  			# def letters number of letters of each word  
+				string first1 =  (words1[word1].substring(1, 1));  # def first as the first letter of the word (word before the critical word starts with an X) 
+				string CW1 = (words1[word1].substring(2, letters1-1)); # def CW as a string with the second till last letter of the word
+			  
+				if (word1 == 3) then; 									# marker trialnummer
+					string last1 =  (words1[word1].substring(letters1, 1));  # def first as the first letter of the word (word before the critical word starts with an X) 
+					text1prac.set_caption( naam1 + last1 ); 
+					text1prac.set_font_size(40);
+					text1prac.redraw();  
+					event1prac.set_event_code( naam1 );   			# name sent to logfile
+
+					trial1prac.set_duration(590);						# in this case the word is the name of the participant, so it's presented for 590ms
+					trial1prac.present();
+									
+					trial2prac.set_duration(IWI);
+					trial2prac.present();
+				elseif (word1!=2)&&(first1 == "X" )  then;   	# if the first letter is an X, cw-1
+					#########################################
+					# word with X (cw-1)
+					text1prac.set_caption( CW1 ); 							# put in text 1 the second till last letter of the word(the word without X)
+					text1prac.set_font_size(40);
+					text1prac.redraw();
+					event1prac.set_event_code( words1[word1] );   # word sent to logfile - begin trial: for the logfile 
+					
+					trial1prac.set_duration(380);						# fixed duration that the cw-1 word is on the screen
+					trial1prac.present();
+									
+					trial2prac.set_duration(IWI);
+					trial2prac.present();
+					##########################################
+					# next word; the critical word (cw)
+					word1 = word1+1; 										# 1 word after the Xword is the critical word
+					letters1 = words1[word1].count();	
+					first1 =  (words1[word1].substring(1, 1)); 
+					CW1 = (words1[word1].substring(2, letters1-1)); 
+					
+					if CW1 == "egoistisch." then CW1 = "egoïstisch."; 
+					elseif CW1 == "egoist." then CW1 = "egoïst."; end;
+					text1mantra.set_caption( CW1 ); 
+					term.print(lines1);
+
+					text1mantra.set_font_size(50);
+					text1mantra.redraw(); 
+					text2mantra.redraw(); 
+					event1mantra.set_event_code( words1[word1] );   # word sent to logfile - begin trial: for the logfile 
+					
+					trial1mantra.set_duration(1500);						# in this case the word is sentence final, so it's presented for 1000ms
+					trial1mantra.present();
+
+					textfix2prac.redraw();
+					fix2prac.present();
+					blankfixlongprac.present();											# execute short blank trial
+					
+				else;															# all words without an X in front
+					text1prac.set_caption( words1[word1] ); 
+					text1prac.set_font_size(40);
+					text1prac.redraw(); 
+					event1prac.set_event_code( words1[word1] );   # word sent to logfile - begin trial: for the logfile 
+					
+					duur = (letters1 * 30) + 290;
+					if (letters1 > 10) then; duur = 590; end;	
+					if (word1 == words1.count()) then; duur =1000; end; 
+					trial1prac.set_duration(duur);						# trial duration is set to duur
+					trial1prac.present();
+									
+					trial2prac.set_duration(IWI);
+					trial2prac.present();
+				end;	
+				word1 = word1 + 1;										# to the next word in the sentence, go through the loop again
+			end;   # words practice loop            
+			
+			lines1 = lines1 + 1;  										# to the next line/sentence
+
+		end; # lines practice loop
+	end;
+
+	h=h+1;
+	end; # blocks practice loop
+
+
+#######################################################################################
+###### BLOCKS
+########################################################################################
+
+	# go through all lines
+	int nr_trials=line_counts[paragraph_count];
+
+	if i == 1 then
+		blok1.present();
+	elseif i == 2 then
+		blok2.present();
+	elseif i == 3 then
+		blok3.present();
+	end;
+
+	blankkort.present();
+	blankfix.present();
+
+		loop
+			int lines = 1;										# def lines #HERE YOU CAN CHANGE WHICH LINES YOU PRESENT
+		until
+			lines >  nr_trials		 							# loop through all lines
+		begin               												
+			fixbeep.present();
+			
+			# go through all words in the lines
+			array<string> words[count_words( paragraphs[i][lines] )]; # make an array with the number of words per trial
+			term.print("blok:");
+			term.print(i);
+
+			term.print(" trial:");
+			term.print(lines);
+			term.print("\n");
+			split( paragraphs[i][lines], words );# split the array trial into an array 'words' with separate words
+			loop
+				int word = 2												# def word, a counter for the number of words, the 1st word is the trial number
+			until
+				word > words.count()										# loop until word equals the number of words in the sentence (=words.count)
+			begin          
+				int letters = words[word].count();  				# def letters with the number of letters of each word  
+				string first =  (words[word].substring(1, 1));  # def first as the first letter of the woord (word before the critical word starts with X) 
+				string CW = (words[word].substring(2, letters-1)); # def CW as a string with the seond till last letter of the word
+			  
+				if (word == 2) then;										# first word: Hey, marker trialnummer
+					string trialnummer=words[1];
+					text1new.set_caption( words[word] ); 
+					text1new.set_font_size(40);
+					text1new.redraw();  
+					event1new.set_event_code( trialnummer + " " + words[word] );    
+
+					duur = ((letters) * 30) + 290;
+					if (letters > 10) then; duur = 590; end; 		
+					trial1new.set_duration(duur);						# trial duration is set to duur
+					int port_code_tnr=int (trialnummer);	#trialnr for port
+					event1new.set_port_code(port_code_tnr);
+					trial1new.present();
+									
+					event2new.set_port_code(241);						#PORT NUMMER 241 to signal offset of a word
+					trial2new.set_duration(IWI);
+					trial2new.present();
+				elseif (word == 3) then; 								# Replace the default name by the name of the participant
+					string last =  (words[word].substring(letters, 1));  # def first as the first letter of the word (word before the critical word starts with an X) 
+					text1new.set_caption( naam1 + last ); 
+					text1new.set_font_size(40);
+					text1new.redraw();  
+					event1new.set_event_code( naam1 );   			# name sent to logfile
+
+					trial1new.set_duration(590);						# fixed duration that the name is on the screen: 590ms
+					event1new.set_port_code(8);						#PORT NUMMER 8 to signal name of participant
+					trial1new.present();
+
+					event2new.set_port_code(241);						#PORT NUMMER 241 to signal offset of a word
+					trial2new.set_duration(IWI);
+					trial2new.present();
+				elseif (word!=2)&&(first == "X" )  then;   		# if the first letter is an X		
+					#########################################
+					# word with the X (cw-1)
+					text1new.set_caption( CW ); 							# put in text1 the seond till last letter (the word without X)
+					text1new.set_font_size(40);
+					text1new.redraw();
+					event1new.set_event_code( words[word] );    
+					
+					trial1new.set_duration(380);						# fixed duration that the cw-1 word is on the screen
+					event1new.set_port_code(9);						#PORT NUMMER 9 to signal pre-critical word
+					trial1new.present();
+			
+					event2new.set_port_code(241);						#PORT NUMMER 241 to signal offset of a word
+					trial2new.set_duration(IWI);
+					trial2new.present();
+					##########################################
+					# next word ; the critical word (cw)
+					word = word+1; 										# 1 word after the Xword is the critical word
+					
+					letters = words[word].count();
+					first =  (words[word].substring(1, 1));    
+					CW = (words[word].substring(2, letters-1)); 
+					
+					if CW == "egoistisch." then CW = "egoïstisch."; 
+					elseif CW == "egoist." then CW = "egoïst."; end;
+					text1new.set_caption( CW ); 
+					text1new.set_font_size(50);
+					text1new.redraw(); 
+					event1new.set_event_code( words[word] );    
+					
+					trial1new.set_duration(1500);						# in this case the word is sentence final, so it's presented for 1000ms
+					
+					# Determine the code for the condition to be sent to the port
+					if (first == "0" )  then; stuur =0;			#oefen
+					elseif (first == "1" )  then; stuur =1; 			# 1=Least Taboo		
+					elseif (first == "2" ) then; stuur=2;		# 2=Medium Taboo
+					elseif (first == "3" ) then; stuur=3;		# 3=Most Taboo
+					elseif (first == "4" ) then; stuur=4;		# 4=Compliment
+					end; 
+
+					event1new.set_port_code(stuur);					#set the correct port code
+					trial1new.present();
+			
+					eventfix2.set_port_code(242);					#PORT NUMMER 241 to signal offset of a word
+					fix2.present();																	      
+					blankfixlong.present();	
+
+				else;																# all words without X
+					text1new.set_caption( words[word] ); 
+					text1new.set_font_size(40);
+					text1new.redraw();  
+					event1new.set_event_code( words[word] );    
+
+					duur = (letters * 30) + 290;
+					if (letters > 10) then; duur = 590; end;	
+					if (word == words.count()) then; duur =1000; end; 
+		
+					trial1new.set_duration(duur);						# trial duration is set to duur
+					event1new.set_port_code(240);						#PORT NUMMER 240 to signal onset of a word
+					trial1new.present();
+
+					event2new.set_port_code(241);						##PORT NUMMER 241 to signal offset of a word
+					trial2new.set_duration(IWI);
+					trial2new.present();				
+				end;	
+				word = word + 1;												# to the next word in the sentence, go throught the loop again 
+			end;   # words experiment loop            
+			lines = lines + 1;  												# to the next line/sentenes
+		end; # lines experiment loop
+	blank.present(); 
+
+	#short break before rating task 
+	breaks.present();										# present the break before each rating
+	blankkort.present();
+	voor_opinie2.present();
+	blank.present();
+
+	int opinie1_nr = i + (i-1) + 62;							# MARKERS for rating
+	opiniescherm1.set_port_code(opinie1_nr);
+	opinie1.present();									# present rating screens
+	blank.present();
+	int opinie2_nr = i + (i-1) + 63;							# voor first block is 45, na blok 1 is 46, na blok 2 is 47, etc.
+	opiniescherm2.set_port_code(opinie2_nr);
+	opinie2.present();
+	blank.present();
+	
+	if i == 1 then
+		int pause_nr = 51;									# marker to signal the end of the pause
+		port.send_code(pause_nr);
+		breakslong1.present();									# present the long break after the rating task
+		blankkort.present();
+		endpauselong.present();
+	elseif i == 2 then
+		int pause_nr = 52;
+		port.send_code(pause_nr);
+		breakslong1.present();
+		blankkort.present();
+		endpauselong.present();
+	elseif i == 3 then
+		blank.present();
+		opinie3.present();									# present rating screens
+		blank.present();
+		int pause_nr = 53;
+		port.send_code(pause_nr);
+		breakslong1.present();
+		blankkort.present();
+		#endpauselong.present();
+
+	end;
+	blank.present();
+	
+   i = i + 1;	
+end; # blocks experiment loop
+
+einde_beledigingen.present();																# EINDE VAN BELEDIGINGEN
+
+
+####################################################
+######### COMPLIMENTEN
+####################################################
+
+int nr_trials2=line_counts2[paragraph_count2];
+
+#Introduceer Whatsapp opnieuw
+whatsapp_intro2.present();											# introduceer Whatsapp
+whatsapp_profile2.present();
+blank.present();
+
+blok4.present();					# Begin complimentenblok
+blankkort.present();
+
+loop
+   int j = 1													# def i
+until
+   j > paragraph_count2												# loop until j is larger than paragraph_count 
+begin
+	
+	blankfixcomp.present();
+
+	loop
+		int lines2 = 1;										# def lines #HERE YOU CAN CHANGE WHICH LINES YOU PRESENT
+	until
+		lines2 > nr_trials2		 							# loop through all lines
+	begin               												
+		fixbeepcomp.present();
+		
+		# go through all words in the lines
+		array<string> words2[count_words( paragraphs2[j][lines2] )]; # make an array with the number of words per trial
+		term.print("blok:");
+		term.print(j);
+
+		term.print(" trial:");
+		term.print(lines2);
+		term.print("\n");
+		split( paragraphs2[j][lines2], words2 );# split the array trial into an array 'words' with separate words
+		
+		loop
+			int word2 = 2												# def word, a counter for the number of words, the 1st word is the trial number
+		until
+			word2 > words2.count()										# loop until word equals the number of words in the sentence (=words.count)
+		begin          
+			int letters2 = words2[word2].count();  				# def letters with the number of letters of each word  
+			string first2 =  (words2[word2].substring(1, 1));  # def first as the first letter of the woord (word before the critical word starts with X) 
+			string CW2 = (words2[word2].substring(2, letters2-1)); # def CW as a string with the seond till last letter of the word
+		  
+			if (word2 == 2) then;										# first word: Hey, marker trialnummer
+				string trialnummer2=words2[1];
+				text1comp.set_caption( words2[word2] ); 
+				text1comp.set_font_size(40);
+				text1comp.redraw();  
+				event1comp.set_event_code( trialnummer2 + " " + words2[word2] );    
+
+				duur = ((letters2) * 30) + 290;
+				if (letters2 > 10) then; duur = 590; end; 		
+				trial1comp.set_duration(duur);						# trial duration is set to duur
+				int port_code_tnr2=int (trialnummer2);	#trialnr for port
+				event1comp.set_port_code(port_code_tnr2);
+				trial1comp.present();
+								
+				event2comp.set_port_code(241);						##PORT NUMMER 241 to signal offset of a word
+				trial2comp.set_duration(IWI);
+				trial2comp.present();
+			elseif (word2 == 3) then; 								# Replace the default name by the name of the participant
+				string last2 =  (words2[word2].substring(letters2, 1));  # def first as the first letter of the word (word before the critical word starts with an X) 
+				text1comp.set_caption( naam1 + last2 ); 
+				text1comp.set_font_size(40);
+				text1comp.redraw();  
+				event1comp.set_event_code( naam1 );   			# name sent to logfile
+
+				trial1comp.set_duration(590);						# fixed duration that the name is on the screen: 590ms
+				event1comp.set_port_code(6);						#PORT NUMMER 6 to signal participants name for compliments
+				trial1comp.present();
+
+				event2comp.set_port_code(241);						##PORT NUMMER 241 to signal offset of a word
+				trial2comp.set_duration(IWI);
+				trial2comp.present();
+			elseif (word2!=2)&&(first2 == "X" )  then;   		# if the first letter is an X		
+				#########################################
+				# word with the X (cw-1)
+				text1comp.set_caption( CW2 ); 							# put in text1 the seond till last letter (the word without X)
+				text1comp.set_font_size(40);
+				text1comp.redraw();
+				event1comp.set_event_code( words2[word2] );    
+				
+				trial1comp.set_duration(380);						# fixed duration that the cw-1 word is on the screen
+				event1comp.set_port_code(7);						#PORT NUMMER 7 to signal CW-1 for compliments
+				trial1comp.present();
+		
+				event2comp.set_port_code(241);						##PORT NUMMER 241 to signal offset of a word
+				trial2comp.set_duration(IWI);
+				trial2comp.present();
+				##########################################
+				# next word ; the critical word (cw)
+				word2 = word2+1; 										# 1 word after the Xword is the critical word
+				
+				letters2 = words2[word2].count();
+				first2 =  (words2[word2].substring(1, 1));    
+				CW2 = (words2[word2].substring(2, letters2-1)); 
+				text1comp.set_caption( CW2 ); 
+				text1comp.set_font_size(50);
+				text1comp.redraw(); 
+				event1comp.set_event_code( words2[word2] );    
+				
+				trial1comp.set_duration(2000);						# in this case the word is sentence final, so it's presented for 1000ms
+				
+				# Port code for compliments = 4
+				event1comp.set_port_code(4);					#set the correct port code
+				trial1comp.present();
+
+				eventfix2comp.set_port_code(244);						##PORT NUMMER 241 to signal offset of a word
+				fix2comp.present();																	      
+				blankfixlongcomp.present();	
+
+			else;																# all words without X
+				text1comp.set_caption( words2[word2] ); 
+				text1comp.set_font_size(40);
+				text1comp.redraw();  
+				event1comp.set_event_code( words2[word2] );    
+
+				duur = (letters2 * 30) + 290;
+				if (letters2 > 10) then; duur = 590; end;	
+				if (word2 == words2.count()) then; duur =1000; end; 
+	
+				trial1comp.set_duration(duur);						# trial duration is set to duur
+				event1comp.set_port_code(240);						##PORT NUMMER 240 to signal onset of a word
+				trial1comp.present();
+
+				event2comp.set_port_code(241);						##PORT NUMMER 241 to signal offset of a word
+				trial2comp.set_duration(IWI);
+				trial2comp.present();				
+			end;	
+			word2 = word2 + 1;												# to the next word in the sentence, go throught the loop again 
+		end;   # words complimenten loop            
+		lines2 = lines2 + 1;  												# to the next line/sentenes
+
+	end; # lines complimenten loop
+	blank.present(); 
+
+	#short break before rating
+	breaks.present();										# present the break before each condition
+	blankkort.present();
+	voor_opinie2.present();
+	blank.present();
+	opiniescherm1.set_port_code(70);
+	opinie1.present();									# present rating screens
+	blank.present();
+
+	
+   j = j + 1;	
+end;
+
+	#marker to signal the end of the compliments block
+einde_complimenten.present();
+										
